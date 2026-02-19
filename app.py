@@ -4,22 +4,46 @@ import numpy as np
 import streamlit as st
 from datetime import datetime
 # =============================
-# BUILD LARGE LIQUID MARKET UNIVERSE
+# INSTITUTIONAL MARKET UNIVERSE BUILDER
 # =============================
 
-import pandas as pd
+import os
+import datetime
 
-sp500_url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-nasdaq_url = "https://en.wikipedia.org/wiki/Nasdaq-100"
+UNIVERSE_FILE = "market_universe.csv"
 
-sp500 = pd.read_html(sp500_url)[0]["Symbol"].tolist()
-nasdaq100 = pd.read_html(nasdaq_url)[4]["Ticker"].tolist()
+def build_universe():
 
-# Clean tickers (remove dots for Yahoo format)
-sp500 = [t.replace(".", "-") for t in sp500]
-nasdaq100 = [t.replace(".", "-") for t in nasdaq100]
+    base_universe = [
+        "AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA",
+        "AMD","NFLX","AVGO","JPM","BAC","XOM","CVX",
+        "UNH","LLY","HD","COST","WMT","KO","PEP",
+        "INTC","CSCO","ADBE","CRM","PYPL","ORCL",
+        "SPY","QQQ","IWM"
+    ]
 
-tickers = list(set(sp500 + nasdaq100))
+    qualified = []
+
+    for ticker in base_universe:
+        try:
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period="30d")
+
+            if len(hist) < 20:
+                continue
+
+            avg_volume = hist["Volume"].mean()
+            price = hist["Close"].iloc[-1]
+
+            if avg_volume > 1000000 and 10 < price < 500:
+                qualified.append(ticker)
+
+        except:
+            continue
+
+    df_universe = pd.DataFrame({"Ticker": qualified})
+    df_universe.to_csv(UNIVERSE_FILE, index=False)
+    return qualified 
 
 st.set_page_config(layout="wide")
 st.title("Aggressive Monthly Options Sniper")
