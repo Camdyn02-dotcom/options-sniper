@@ -52,7 +52,7 @@ def build_universe():
                 continue
             avg_volume = hist["Volume"].mean()
             price = hist["Close"].iloc[-1]
-            if avg_volume > 500_000 and 5 < price < 800:
+            if avg_volume > 250_000 and 5 < price < 800:
                 qualified.append(ticker)
         except:
             continue
