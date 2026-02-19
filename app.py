@@ -250,6 +250,32 @@ st.dataframe(top_calls, use_container_width=True)
 
 st.subheader("Top 5 PUTS")
 st.dataframe(top_puts, use_container_width=True)
+# =============================
+# DASHBOARD METRICS
+# =============================
+
+st.markdown("## Market Summary Metrics")
+
+total_contracts = len(df)
+avg_score = df["Score"].mean()
+top_score = df["Score"].max()
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric("Contracts Scanned", total_contracts)
+col2.metric("Average Score", round(avg_score,2))
+col3.metric("Top Score Today", round(top_score,2))
+# =============================
+# DAILY SNAPSHOT EXPORT
+# =============================
+
+import datetime
+
+if st.button("Save Today's Snapshot"):
+
+    filename = f"options_snapshot_{datetime.datetime.today().strftime('%Y%m%d')}.csv"
+    df.to_csv(filename, index=False)
+    st.success(f"Snapshot saved as {filename}")
 
 st.subheader("Capital Deployment Plan ($500 Aggressive)")
 st.write("""
@@ -341,3 +367,54 @@ if len(allocation) > 0:
     st.write(f"Remaining Capital: ${round(capital,2)}")
 else:
     st.write("No contracts fit capital allocation rules today.")
+    # =============================
+# BACKTEST ENGINE (90 DAY SIM)
+# =============================
+
+st.markdown("## Historical Backtest (Last 90 Days Simulation)")
+
+import datetime
+
+if st.button("Run 90 Day Backtest"):
+
+    initial_capital = 500
+    capital_bt = initial_capital
+    wins = 0
+    losses = 0
+    trades = 0
+
+    end_date = datetime.datetime.today()
+    start_date = end_date - datetime.timedelta(days=90)
+
+    for ticker in tickers:
+        try:
+            hist = yf.download(ticker, start=start_date, end=end_date, progress=False)
+
+            if len(hist) < 10:
+                continue
+
+            entry_price = hist["Close"].iloc[-6]
+            exit_price = hist["Close"].iloc[-1]
+
+            pct_move = (exit_price - entry_price) / entry_price
+
+            if abs(pct_move) > 0.03:  # 3% move threshold
+                gain = capital_bt * 0.1 * pct_move
+                capital_bt += gain
+                wins += 1 if gain > 0 else 0
+                losses += 1 if gain <= 0 else 0
+                trades += 1
+
+        except:
+            continue
+
+    if trades > 0:
+        win_rate = wins / trades
+        total_return = (capital_bt - initial_capital) / initial_capital
+
+        st.write(f"Trades Taken: {trades}")
+        st.write(f"Win Rate: {round(win_rate*100,2)}%")
+        st.write(f"Total Return: {round(total_return*100,2)}%")
+        st.write(f"Ending Capital: ${round(capital_bt,2)}")
+    else:
+        st.write("Not enough data to simulate trades.")
