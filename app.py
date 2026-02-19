@@ -1,11 +1,13 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+import numpy as np
 import datetime
 import os
-import time 
-import snscrape.modules.twitter as sntwitter   # REMOVE OR COMMENT OUT
-
+import time
+import requests
+import lxml
+import html5lib
 st.set_page_config(layout="wide")
 st.title("Aggressive Options Sniper Dashboard")
 
