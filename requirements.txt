@@ -1,4 +1,6 @@
-streamlit
-yfinance
-pandas
-numpy
+streamlit>=1.25
+pandas>=2.0
+numpy>=1.25
+yfinance>=0.2.27
+lxml>=4.9
+snscrape>=0.5.0
