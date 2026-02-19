@@ -367,11 +367,11 @@ if len(allocation) > 0:
     st.write(f"Remaining Capital: ${round(capital,2)}")
 else:
     st.write("No contracts fit capital allocation rules today.")
-    # =============================
-# BACKTEST ENGINE (90 DAY SIM)
+   # =============================
+# TRUE ROLLING BACKTEST ENGINE
 # =============================
 
-st.markdown("## Historical Backtest (Last 90 Days Simulation)")
+st.markdown("## Historical Backtest (90 Day Rolling Simulation)")
 
 import datetime
 
@@ -384,37 +384,50 @@ if st.button("Run 90 Day Backtest"):
     trades = 0
 
     end_date = datetime.datetime.today()
-    start_date = end_date - datetime.timedelta(days=90)
+    start_date = end_date - datetime.timedelta(days=120)
 
     for ticker in tickers:
+
         try:
             hist = yf.download(ticker, start=start_date, end=end_date, progress=False)
 
-            if len(hist) < 10:
+            if len(hist) < 30:
                 continue
 
-            entry_price = hist["Close"].iloc[-6]
-            exit_price = hist["Close"].iloc[-1]
+            # Rolling 5-day forward test
+            for i in range(10, len(hist) - 5):
 
-            pct_move = (exit_price - entry_price) / entry_price
+                entry_price = hist["Close"].iloc[i]
+                exit_price = hist["Close"].iloc[i + 5]
 
-            if abs(pct_move) > 0.03:  # 3% move threshold
-                gain = capital_bt * 0.1 * pct_move
-                capital_bt += gain
-                wins += 1 if gain > 0 else 0
-                losses += 1 if gain <= 0 else 0
-                trades += 1
+                pct_move = (exit_price - entry_price) / entry_price
+
+                # Only take trades where movement exceeds 2%
+                if abs(pct_move) > 0.02:
+
+                    position_size = capital_bt * 0.2
+                    pnl = position_size * pct_move
+                    capital_bt += pnl
+
+                    trades += 1
+
+                    if pnl > 0:
+                        wins += 1
+                    else:
+                        losses += 1
 
         except:
             continue
 
     if trades > 0:
+
         win_rate = wins / trades
         total_return = (capital_bt - initial_capital) / initial_capital
 
-        st.write(f"Trades Taken: {trades}")
+        st.write(f"Trades Simulated: {trades}")
         st.write(f"Win Rate: {round(win_rate*100,2)}%")
         st.write(f"Total Return: {round(total_return*100,2)}%")
         st.write(f"Ending Capital: ${round(capital_bt,2)}")
+
     else:
-        st.write("Not enough data to simulate trades.")
+        st.write("No qualifying trades found.") 
