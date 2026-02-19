@@ -56,7 +56,8 @@ def build_universe():
 
     df_universe = pd.DataFrame({"Ticker": qualified})
     df_universe.to_csv(UNIVERSE_FILE, index=False)
-       return qualified
+       
+  return qualified
 
 st.set_page_config(layout="wide")
 st.title("Aggressive Monthly Options Sniper")
