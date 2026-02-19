@@ -1,3 +1,8 @@
+# Prevent snsrape from crashing the app
+try:
+    import snscrape.modules.twitter as sntwitter
+except ImportError:
+    sntwitter = None
 import subprocess
 import sys
 
