@@ -4,6 +4,7 @@ import numpy as np
 import streamlit as st
 from datetime import datetime
 import os
+UNIVERSE_FILE = "market_universe.csv"
 def build_universe():
 
     # Use major US ETFs to pull large holdings
