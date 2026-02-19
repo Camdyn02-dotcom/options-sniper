@@ -51,15 +51,21 @@ if os.path.exists(UNIVERSE_FILE):
 else:
     tickers = build_universe()
 # =============================
-# OPTIONS SCANNER
+# OPTIONS SCANNER + PORTFOLIO SIMULATION + DASHBOARD
+# Lines ~50–120
 # =============================
-st.markdown("## Options Scanner")
+st.markdown("## Options Scanner & Portfolio Simulation")
 
 import datetime
 
 all_options = []
 
-# Loop through tickers in universe
+# Portfolio simulation variables
+initial_capital = 500
+capital_sim = initial_capital
+portfolio = []
+
+# Loop through tickers
 for ticker in tickers:
 
     try:
@@ -67,38 +73,59 @@ for ticker in tickers:
         expirations = opt.options
 
         if not expirations:
-            continue  # Skip tickers without options
+            continue  # Skip tickers with no options
 
-        # Use nearest expiration
+        # Take nearest expiration
         exp = expirations[0]
         chain = opt.option_chain(exp)
 
         calls = chain.calls
         puts = chain.puts
 
-        # Add scoring column for each contract
+        # Process both call and put contracts
         for df, typ in [(calls, "Call"), (puts, "Put")]:
             for _, row in df.iterrows():
                 try:
                     score = 0
 
-                    # Example scoring: volume + openInterest
-                    if "volume" in row and row["volume"] > 1000:
+                    # --------------------------
+                    # Momentum / liquidity scoring
+                    # --------------------------
+                    if row.get("volume", 0) > 2000:
                         score += 2
-                    if "openInterest" in row and row["openInterest"] > 1000:
+                    if row.get("openInterest", 0) > 5000:
                         score += 3
 
+                    # --------------------------
                     # Delta scoring
-                    if "delta" in row:
-                        delta_val = abs(row["delta"])
-                    else:
-                        delta_val = 0.4
+                    # --------------------------
+                    delta_val = abs(row.get("delta", 0.4))
                     if 0.35 <= delta_val <= 0.55:
                         score += 3
                     elif delta_val < 0.25:
                         score -= 2
 
-                    all_options.append({
+                    # --------------------------
+                    # Gamma / IV spike scoring
+                    # --------------------------
+                    if "impliedVolatility" in row:
+                        iv = row["impliedVolatility"]
+                        if iv > 0.5:  # high IV spike
+                            score += 2
+
+                    # --------------------------
+                    # Breakout detection (example)
+                    # --------------------------
+                    hist = yf.Ticker(ticker).history(period="20d")
+                    if not hist.empty:
+                        high20 = hist["High"].max()
+                        if row["strike"] > high20:
+                            score += 1  # breakout above recent high
+
+                    # --------------------------
+                    # Save contract
+                    # --------------------------
+                    contract = {
                         "Ticker": ticker,
                         "Type": typ,
                         "Strike": row["strike"],
@@ -107,8 +134,27 @@ for ticker in tickers:
                         "Volume": row.get("volume", 0),
                         "OpenInterest": row.get("openInterest", 0),
                         "Delta": delta_val,
+                        "IV": row.get("impliedVolatility", 0),
                         "Score": score
-                    })
+                    }
+
+                    all_options.append(contract)
+
+                    # --------------------------
+                    # Portfolio simulation
+                    # --------------------------
+                    if score >= 5 and capital_sim > row["lastPrice"]:
+                        position_size = min(capital_sim * 0.2, row["lastPrice"] * 1)
+                        portfolio.append({
+                            "Ticker": ticker,
+                            "Type": typ,
+                            "Strike": row["strike"],
+                            "Expiration": exp,
+                            "EntryPrice": row["lastPrice"],
+                            "Score": score,
+                            "PositionSize": position_size
+                        })
+                        capital_sim -= position_size
 
                 except:
                     continue
@@ -117,9 +163,84 @@ for ticker in tickers:
         print(f"Options fetch failed for {ticker}: {e}")
         continue
 
-# Convert to dataframe
+# Convert to dataframe for display
 df = pd.DataFrame(all_options)
 
+# --------------------------
+# Display main options table
+# --------------------------
+st.dataframe(df, use_container_width=True)
+
+# --------------------------
+# Dashboard metrics
+# --------------------------
+st.markdown("## Dashboard Metrics")
+
+total_contracts = len(df)
+avg_score = df["Score"].mean() if not df.empty else 0
+top_score = df["Score"].max() if not df.empty else 0
+capital_remaining = capital_sim
+
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Contracts Scanned", total_contracts)
+col2.metric("Average Score", round(avg_score,2))
+col3.metric("Top Score Today", top_score)
+col4.metric("Capital Remaining", f"${round(capital_remaining,2)}")
+
+# --------------------------
+# Save daily snapshot
+# --------------------------
+UNIVERSE_FILE = "market_universe.csv"
+if st.button("Save Today's Snapshot"):
+    df.to_csv(f"options_snapshot_{datetime.datetime.today().strftime('%Y%m%d')}.csv", index=False)
+    st.success("Snapshot saved successfully.")
+# =============================
+# 90-DAY ROLLING BACKTEST
+# Lines ~121–160
+# =============================
+st.markdown("## 90-Day Backtest Simulation")
+
+if st.button("Run 90 Day Backtest"):
+
+    capital_bt = initial_capital
+    wins = 0
+    losses = 0
+    trades = 0
+
+    for ticker in tickers:
+        try:
+            hist = yf.Ticker(ticker).history(period="120d")
+            if len(hist) < 20:
+                continue
+
+            # Rolling 5-day forward simulation
+            for i in range(10, len(hist) - 5):
+                entry = hist["Close"].iloc[i]
+                exit = hist["Close"].iloc[i + 5]
+                pct_move = (exit - entry)/entry
+
+                # Filter trades with >1% move
+                if abs(pct_move) > 0.01:
+                    position_size = capital_bt * 0.2
+                    pnl = position_size * pct_move
+                    capital_bt += pnl
+                    trades += 1
+                    if pnl > 0:
+                        wins += 1
+                    else:
+                        losses += 1
+        except:
+            continue
+
+    if trades > 0:
+        win_rate = wins / trades
+        total_return = (capital_bt - initial_capital)/initial_capital
+        st.write(f"Trades Simulated: {trades}")
+        st.write(f"Win Rate: {round(win_rate*100,2)}%")
+        st.write(f"Total Return: {round(total_return*100,2)}%")
+        st.write(f"Ending Capital: ${round(capital_bt,2)}")
+    else:
+        st.write("No qualifying trades found.")
 # Display table
 st.dataframe(df, use_container_width=True)
 
