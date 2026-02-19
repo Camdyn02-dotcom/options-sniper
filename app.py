@@ -6,6 +6,9 @@ from datetime import datetime
 # =============================
 # INSTITUTIONAL MARKET UNIVERSE BUILDER
 # =============================
+if st.button("Rebuild Market Universe"):
+    tickers = build_universe()
+    st.success("Universe rebuilt successfully.")
 
 import os
 import datetime
@@ -44,7 +47,10 @@ def build_universe():
     df_universe = pd.DataFrame({"Ticker": qualified})
     df_universe.to_csv(UNIVERSE_FILE, index=False)
     return qualified 
-
+if os.path.exists(UNIVERSE_FILE):
+    tickers = pd.read_csv(UNIVERSE_FILE)["Ticker"].tolist()
+else:
+    tickers = build_universe()
 st.set_page_config(layout="wide")
 st.title("Aggressive Monthly Options Sniper")
 
