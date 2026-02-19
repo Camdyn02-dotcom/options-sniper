@@ -5,9 +5,7 @@ import numpy as np
 import datetime
 import os
 import time
-import requests
-import lxml
-import html5lib
+
 st.set_page_config(layout="wide")
 st.title("Aggressive Options Sniper Dashboard")
 
@@ -27,8 +25,8 @@ def build_universe():
         "MRNA","PFE","BNTX","QCOM","AMAT","MU","ADI","LRCX","TSM","INTU",
         "PYPL","SQ","SHOP","SNOW","ZM","DOCU","TEAM","DDOG","ROKU","SPOT"
     ]
-    # Fill up to 200 with additional tickers if needed (real tickers)
-    extra_tickers = ["BAC","C","JPM","GS","MS","WFC","PNC","USB","TFC","SCHW","BK","COF","ALLY","FRC"]
+    # Fill to 200 with additional tickers
+    extra_tickers = ["BAC","C","JPM","MS","WFC","PNC","USB","TFC","SCHW","BK","COF","ALLY","FRC"]
     for t in extra_tickers:
         if len(tickers) < 200:
             tickers.append(t)
@@ -38,7 +36,7 @@ def build_universe():
         try:
             stock = yf.Ticker(ticker)
             hist = stock.history(period="60d")
-            if len(hist) < 40:
+            if hist.empty or len(hist) < 40:
                 continue
             avg_volume = hist["Volume"].mean()
             price = hist["Close"].iloc[-1]
@@ -46,6 +44,7 @@ def build_universe():
                 qualified.append(ticker)
         except:
             continue
+
     df = pd.DataFrame({"Ticker": qualified})
     df.to_csv(UNIVERSE_FILE, index=False)
     return qualified
@@ -66,15 +65,17 @@ if st.button("Score Ticker") and manual_ticker:
     try:
         stock = yf.Ticker(manual_ticker.upper())
         hist = stock.history(period="6mo")
-        last_price = hist["Close"].iloc[-1]
-
-        score = 0
-        if hist["Close"].iloc[-1] > hist["Close"].rolling(50).mean().iloc[-1]:
-            score += 3
-        if hist["Close"].iloc[-1] > hist["Close"].rolling(200).mean().iloc[-1]:
-            score += 2
-        st.write(f"{manual_ticker.upper()} Current Price: ${last_price:.2f}")
-        st.write(f"{manual_ticker.upper()} Score: {score}")
+        if hist.empty:
+            st.write("No historical data available.")
+        else:
+            last_price = hist["Close"].iloc[-1]
+            score = 0
+            if last_price > hist["Close"].rolling(50).mean().iloc[-1]:
+                score += 3
+            if last_price > hist["Close"].rolling(200).mean().iloc[-1]:
+                score += 2
+            st.write(f"{manual_ticker.upper()} Current Price: ${last_price:.2f}")
+            st.write(f"{manual_ticker.upper()} Score: {score}")
     except:
         st.write("Ticker not valid or no data available.")
 
@@ -82,7 +83,6 @@ if st.button("Score Ticker") and manual_ticker:
 # Options Scanner
 # -----------------------------
 st.subheader("Options Scanner")
-
 MIN_DTE_LONG = 7
 MIN_DTE_SHORT = 1
 MAX_DTE = 45
@@ -100,6 +100,7 @@ for ticker in tickers:
         expirations = opt.options
         if not expirations:
             continue
+
         hist_file = f"{CACHE_DIR}/{ticker}.csv"
         if os.path.exists(hist_file):
             hist = pd.read_csv(hist_file, index_col=0, parse_dates=True)
@@ -108,20 +109,29 @@ for ticker in tickers:
             hist.to_csv(hist_file)
         if hist.empty:
             continue
+
         current_price = hist["Close"].iloc[-1]
         high20 = hist["High"].rolling(20).max().iloc[-1]
 
         for exp in expirations:
-            exp_date = datetime.datetime.strptime(exp, "%Y-%m-%d")
+            try:
+                exp_date = datetime.datetime.strptime(exp, "%Y-%m-%d")
+            except:
+                continue
             dte = (exp_date - datetime.datetime.today()).days
             if dte < MIN_DTE_SHORT or dte > MAX_DTE:
                 continue
 
-            chain = opt.option_chain(exp)
+            try:
+                chain = opt.option_chain(exp)
+            except:
+                continue
+
             for df, typ in [(chain.calls, "CALL"), (chain.puts, "PUT")]:
                 for _, row in df.iterrows():
                     try:
-                        if pd.isna(row["lastPrice"]) or row["lastPrice"] == 0:
+                        last_price = row.get("lastPrice", 0)
+                        if pd.isna(last_price) or last_price == 0:
                             continue
                         score = 0
                         if row.get("volume", 0) > 2000:
@@ -137,12 +147,13 @@ for ticker in tickers:
                             score += 2
                         if row["strike"] > high20:
                             score += 1
+
                         contract = {
                             "Ticker": ticker,
                             "Type": typ,
                             "Strike": row["strike"],
                             "Expiration": exp,
-                            "LastPrice": row["lastPrice"],
+                            "LastPrice": last_price,
                             "Volume": row.get("volume", 0),
                             "OpenInterest": row.get("openInterest", 0),
                             "Delta": delta_val,
@@ -150,10 +161,12 @@ for ticker in tickers:
                             "Score": score,
                             "DTE": dte
                         }
+
                         if dte >= MIN_DTE_LONG:
                             all_options_long.append(contract)
                         if dte >= MIN_DTE_SHORT:
                             all_options_short.append(contract)
+
                     except:
                         continue
         time.sleep(0.1)
