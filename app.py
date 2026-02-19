@@ -107,7 +107,7 @@ for ticker in tickers:
                     # ------------------------
                     exp_date = datetime.datetime.strptime(exp, "%Y-%m-%d")
                     dte = (exp_date - datetime.datetime.today()).days
-                    if dte < 7:
+                    if dte < 5:
                         continue  # skip short-term options
 
                     score = 0
@@ -190,7 +190,7 @@ st.dataframe(top_puts, use_container_width=True)
 # =============================
 st.markdown("## Portfolio Simulation ($500 Aggressive Allocation)")
 
-capital = 500
+capital = 1000
 allocation = []
 
 top_combined = pd.concat([top_calls, top_puts]).sort_values("Score", ascending=False)
@@ -233,7 +233,7 @@ else:
 st.markdown("## Historical Backtest (90-Day Rolling Simulation)")
 
 if st.button("Run 90 Day Backtest"):
-    initial_capital = 500
+    initial_capital = 1000
     capital_bt = initial_capital
     wins = 0
     losses = 0
