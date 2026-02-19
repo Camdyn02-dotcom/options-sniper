@@ -3,42 +3,47 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 from datetime import datetime
-# =============================
-# INSTITUTIONAL MARKET UNIVERSE BUILDER
-# =============================
-if st.button("Rebuild Market Universe"):
-    tickers = build_universe()
-    st.success("Universe rebuilt successfully.")
-
-import os
-import datetime
-
-UNIVERSE_FILE = "market_universe.csv"
-
 def build_universe():
 
-    base_universe = [
+    # Use major US ETFs to pull large holdings
+    seed_etfs = ["SPY", "QQQ", "IWM", "DIA"]
+
+    all_symbols = set()
+
+    for etf in seed_etfs:
+        try:
+            holdings = yf.Ticker(etf).history(period="1d")
+            all_symbols.add(etf)
+        except:
+            continue
+
+    # Hard-seed high liquidity list (top traded names)
+    liquidity_core = [
         "AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA",
         "AMD","NFLX","AVGO","JPM","BAC","XOM","CVX",
         "UNH","LLY","HD","COST","WMT","KO","PEP",
         "INTC","CSCO","ADBE","CRM","PYPL","ORCL",
-        "SPY","QQQ","IWM"
+        "SPY","QQQ","IWM","DIA""NVDA","AMD","TSLA","META","AAPL","COIN",
+    "AMZN","MSFT","GOOGL","NFLX","PLTR","SHOP"
     ]
+
+    all_symbols.update(liquidity_core)
 
     qualified = []
 
-    for ticker in base_universe:
+    for ticker in all_symbols:
+
         try:
             stock = yf.Ticker(ticker)
-            hist = stock.history(period="30d")
+            hist = stock.history(period="60d")
 
-            if len(hist) < 20:
+            if len(hist) < 40:
                 continue
 
             avg_volume = hist["Volume"].mean()
             price = hist["Close"].iloc[-1]
 
-            if avg_volume > 1000000 and 10 < price < 500:
+            if avg_volume > 500000 and 5 < price < 800:
                 qualified.append(ticker)
 
         except:
@@ -46,7 +51,8 @@ def build_universe():
 
     df_universe = pd.DataFrame({"Ticker": qualified})
     df_universe.to_csv(UNIVERSE_FILE, index=False)
-    return qualified 
+
+    return qualified
 if os.path.exists(UNIVERSE_FILE):
     tickers = pd.read_csv(UNIVERSE_FILE)["Ticker"].tolist()
 else:
@@ -59,11 +65,6 @@ MAX_DTE = 45
 CALL_WEIGHT = 1.2
 PUT_WEIGHT = 1.0
 
-tickers = [
-    
-    "NVDA","AMD","TSLA","META","AAPL","COIN",
-    "AMZN","MSFT","GOOGL","NFLX","PLTR","SHOP"
-]
 # =============================
 # MARKET ENGINE (Phases 7 & 9)
 # =============================
