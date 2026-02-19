@@ -5,6 +5,8 @@ import datetime
 import os
 import time
 from collections import Counter
+import re
+import snscrape.modules.twitter as sntwitter
 
 # -----------------------------
 # CONFIG
@@ -45,7 +47,7 @@ def build_universe():
         except:
             continue
 
-    # Expand from S&P 500 list dynamically
+    # Expand from S&P 500 dynamically
     try:
         sp500_url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
         table = pd.read_html(sp500_url)[0]
@@ -242,7 +244,7 @@ if st.sidebar.button("Score Tickers"):
             stock_score = score_stock(hist)
             current_price = hist["Close"].iloc[-1]
             for exp in stock.options:
-                exp_date = datetime.datetime.strptime(exp, "%Y-%m-%d")
+                exp_date = datetime.datetime.strptime(exp,"%Y-%m-%d")
                 dte = (exp_date - datetime.datetime.today()).days
                 if dte < MIN_DTE or dte > MAX_DTE:
                     continue
@@ -283,3 +285,29 @@ if insider_data:
     st.dataframe(insider_df[["Ticker","Date","Type","Shares","Value"]].sort_values("Date", ascending=False))
 else:
     st.write("No insider transactions found for selected tickers.")
+
+# -----------------------------
+# TRENDING OPTIONS FROM X
+# -----------------------------
+st.subheader("Trending Options (X/Twitter)")
+trending_terms = st.text_input("Trending scan keywords (e.g., $AAPL, $TSLA, call, put)", "$AAPL,$TSLA")
+keywords = [t.strip().upper() for t in trending_terms.split(",") if t.strip()]
+tweet_limit = 200
+ticker_counter = Counter()
+
+for term in keywords:
+    try:
+        for i, tweet in enumerate(sntwitter.TwitterSearchScraper(f"{term} lang:en").get_items()):
+            if i >= tweet_limit:
+                break
+            tickers_in_tweet = re.findall(r"\$[A-Z]{1,5}", tweet.content.upper())
+            ticker_counter.update(tickers_in_tweet)
+    except:
+        continue
+
+if ticker_counter:
+    trending_df = pd.DataFrame(ticker_counter.items(), columns=["Ticker","Mentions"])
+    trending_df = trending_df.sort_values("Mentions", ascending=False).reset_index(drop=True)
+    st.dataframe(trending_df, use_container_width=True)
+else:
+    st.write("No trending tickers found in recent tweets.")
