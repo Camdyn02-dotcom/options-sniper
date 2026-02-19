@@ -107,7 +107,7 @@ for ticker in tickers:
                     # ------------------------
                     exp_date = datetime.datetime.strptime(exp, "%Y-%m-%d")
                     dte = (exp_date - datetime.datetime.today()).days
-                    if dte < 5:
+                    if dte < 1:
                         continue  # skip short-term options
 
                     score = 0
@@ -174,7 +174,7 @@ if not all_options:
 else:
     df = pd.DataFrame(all_options)
     df = df.sort_values("Score", ascending=False)
-    df = df[df["Score"] > 4]  # threshold to ensure top options
+    df = df[df["Score"] > 3]  # threshold to ensure top options
 
 top_calls = df[df["Type"]=="CALL"].head(5)
 top_puts = df[df["Type"]=="PUT"].head(5)
