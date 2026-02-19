@@ -8,7 +8,7 @@ UNIVERSE_FILE = "market_universe.csv"
 def build_universe():
  if os.path.exists(UNIVERSE_FILE):
     tickers = pd.read_csv(UNIVERSE_FILE)["Ticker"].tolist()
-    else:
+ else:
     tickers = build_universe()
     # Use major US ETFs to pull large holdings
     seed_etfs = ["SPY", "QQQ", "IWM", "DIA"]
