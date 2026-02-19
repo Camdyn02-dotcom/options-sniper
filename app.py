@@ -14,16 +14,21 @@ st.title("Aggressive Options Sniper Dashboard")
 UNIVERSE_FILE = "market_universe.csv"
 
 def build_universe():
-    # Example seed of 200 tickers (top S&P + tech + diversified)
+    # Top tickers: S&P 500 + Nasdaq + high-volume ETFs
     tickers = [
         "AAPL","MSFT","AMZN","GOOGL","META","TSLA","NVDA","NFLX","AMD","INTC",
         "CSCO","ADBE","CRM","PYPL","ORCL","AVGO","QCOM","IBM","TXN","SPY",
         "QQQ","IWM","DIA","XOM","CVX","UNH","LLY","HD","COST","WMT",
-        "KO","PEP","JNJ","MRK","V","MA","PYPL","SBUX","BKNG","ZM"
+        "KO","PEP","JNJ","MRK","V","MA","SBUX","BKNG","ZM","NKE","GS","BA",
+        "CAT","MMM","MCD","WBA","GM","F","GE","LMT","NEE","AXP","T","VZ",
+        "MRNA","PFE","BNTX","QCOM","AMAT","MU","ADI","LRCX","TSM","INTU",
+        "PYPL","SQ","SHOP","SNOW","ZM","DOCU","TEAM","DDOG","ROKU","SPOT"
     ]
-    # Fill up to 200 with dummy symbols (or add more real tickers)
-    while len(tickers) < 200:
-        tickers.append("AAPL")  # placeholder for simplicity
+    # Fill up to 200 with additional tickers if needed (real tickers)
+    extra_tickers = ["BAC","C","JPM","GS","MS","WFC","PNC","USB","TFC","SCHW","BK","COF","ALLY","FRC"]
+    for t in extra_tickers:
+        if len(tickers) < 200:
+            tickers.append(t)
 
     qualified = []
     for ticker in tickers:
@@ -50,7 +55,7 @@ else:
 st.write(f"Universe Size: {len(tickers)}")
 
 # -----------------------------
-# Manual Ticker Input
+# Manual Ticker Scoring
 # -----------------------------
 st.subheader("Manual Ticker Scoring")
 manual_ticker = st.text_input("Enter a ticker to score (e.g., AAPL)")
@@ -113,6 +118,8 @@ for ticker in tickers:
             for df, typ in [(chain.calls, "CALL"), (chain.puts, "PUT")]:
                 for _, row in df.iterrows():
                     try:
+                        if pd.isna(row["lastPrice"]) or row["lastPrice"] == 0:
+                            continue
                         score = 0
                         if row.get("volume", 0) > 2000:
                             score += 2
@@ -146,7 +153,7 @@ for ticker in tickers:
                             all_options_short.append(contract)
                     except:
                         continue
-        time.sleep(0.2)
+        time.sleep(0.1)
     except:
         continue
 
@@ -164,33 +171,31 @@ if not df_short.empty:
     st.dataframe(df_short.sort_values("Score", ascending=False), use_container_width=True)
 else:
     st.write("No short-term options scored today.")
+
 # -----------------------------
-# Trending / Most Active Options (Yahoo Finance)
+# Trending / Most Active Options
 # -----------------------------
 st.subheader("Trending / Most Active Options (Yahoo Finance)")
-
 try:
-    # Calls
     calls_url = "https://finance.yahoo.com/options/most-active?count=100"
     calls_tables = pd.read_html(calls_url)
     calls_df = calls_tables[0]
     calls_df = calls_df.rename(columns=lambda x: x.replace("\n", " "))
-    calls_df = calls_df[["Symbol", "Last Price", "Volume", "Open Interest"]].head(10)
+    calls_df = calls_df[["Symbol", "Last Price", "Volume", "Open Interest"]].head(20)
     calls_df["Type"] = "CALL"
-    
-    # Puts
+
     puts_url = "https://finance.yahoo.com/options/most-active?count=100&putCall=PUT"
     puts_tables = pd.read_html(puts_url)
     puts_df = puts_tables[0]
     puts_df = puts_df.rename(columns=lambda x: x.replace("\n", " "))
-    puts_df = puts_df[["Symbol", "Last Price", "Volume", "Open Interest"]].head(10)
+    puts_df = puts_df[["Symbol", "Last Price", "Volume", "Open Interest"]].head(20)
     puts_df["Type"] = "PUT"
-    
+
     trending_df = pd.concat([calls_df, puts_df], ignore_index=True)
     st.dataframe(trending_df, use_container_width=True)
-
 except Exception as e:
     st.write("Could not fetch trending options:", e)
+
 # -----------------------------
 # Portfolio Simulation
 # -----------------------------
@@ -198,7 +203,7 @@ st.subheader("Portfolio Simulation ($500 Aggressive)")
 capital = 500
 allocation = []
 
-top_options = df_long.sort_values("Score", ascending=False).head(5) if not df_long.empty else pd.DataFrame()
+top_options = pd.concat([df_long, df_short]).sort_values("Score", ascending=False).head(5) if not df_long.empty or not df_short.empty else pd.DataFrame()
 for _, row in top_options.iterrows():
     contract_price = row["LastPrice"] * 100
     if row["Score"] >= 10:
@@ -230,7 +235,7 @@ else:
     st.write("No contracts fit capital allocation rules today.")
 
 # -----------------------------
-# Insider Big Buys/Sells
+# Insider Buys/Sells Placeholder
 # -----------------------------
 st.subheader("Insider Buys / Sells")
 insider_df = pd.DataFrame(columns=["Ticker","Type","Date","Shares","Transaction"])
