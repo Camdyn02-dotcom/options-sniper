@@ -2,27 +2,47 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import streamlit as st
-from datetime import datetime, timedelta
+from datetime import datetime
 
 st.set_page_config(layout="wide")
-st.title("Aggressive $500 Options Sniper Dashboard")
+st.title("Aggressive $500 Monthly Options Sniper")
 
-# ---- Universe ----
+MIN_DTE = 30
+MAX_DTE = 45
+CALL_WEIGHT = 1.2
+PUT_WEIGHT = 1.0
+
 tickers = [
     "NVDA","AMD","TSLA","META","AAPL","COIN",
-    "AMZN","MSFT","GOOGL","NFLX","BA","PLTR",
-    "SHOP","SNOW","RIVN","FSLY","SOFI","VAL"
+    "AMZN","MSFT","GOOGL","NFLX","PLTR","SHOP"
 ]
 
-def trend_score(df):
-    df["ema50"] = df["Close"].ewm(span=50).mean()
-    df["ema200"] = df["Close"].ewm(span=200).mean()
-    df["rsi"] = 100 - (100/(1 + df["Close"].pct_change().rolling(14).mean()))
+def compute_rsi(series, period=14):
+    delta = series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.rolling(period).mean()
+    avg_loss = loss.rolling(period).mean()
+    rs = avg_gain / avg_loss
+    return 100 - (100 / (1 + rs))
+
+def score_stock(hist):
+    hist["ema50"] = hist["Close"].ewm(span=50).mean()
+    hist["ema200"] = hist["Close"].ewm(span=200).mean()
+    hist["rsi"] = compute_rsi(hist["Close"])
+    hist["atr"] = hist["High"] - hist["Low"]
+
     score = 0
-    if df["ema50"].iloc[-1] > df["ema200"].iloc[-1]:
+
+    if hist["ema50"].iloc[-1] > hist["ema200"].iloc[-1]:
+        score += 3
+
+    if 55 <= hist["rsi"].iloc[-1] <= 70:
         score += 2
-    if df["rsi"].iloc[-1] > 55:
+
+    if hist["atr"].iloc[-1] > hist["atr"].rolling(20).mean().iloc[-1]:
         score += 2
+
     return score
 
 results = []
@@ -31,41 +51,71 @@ for ticker in tickers:
     try:
         stock = yf.Ticker(ticker)
         hist = stock.history(period="6mo")
-        if len(hist) < 50:
+
+        if len(hist) < 100:
             continue
-        
-        score = trend_score(hist)
 
-        options_dates = stock.options
-        for exp in options_dates:
+        stock_score = score_stock(hist)
+        current_price = hist["Close"].iloc[-1]
+
+        for exp in stock.options:
             exp_date = datetime.strptime(exp,"%Y-%m-%d")
-            if 30 <= (exp_date - datetime.today()).days <= 45:
-                opt = stock.option_chain(exp)
-                calls = opt.calls
-                puts = opt.puts
+            dte = (exp_date - datetime.today()).days
 
-                # Calls
-                for _, row in calls.iterrows():
-                    if 0.4 <= row["delta"] <= 0.65:
+            if MIN_DTE <= dte <= MAX_DTE:
+                chain = stock.option_chain(exp)
+
+                for _, row in chain.calls.iterrows():
+                    if row["strike"] > current_price * 1.02 and row["strike"] < current_price * 1.07:
+                        option_score = stock_score * CALL_WEIGHT
+                        option_score += row["volume"] / 1000
                         results.append([
-                            ticker,"CALL",exp,row["strike"],
-                            row["lastPrice"],score
+                            ticker,
+                            "CALL",
+                            exp,
+                            row["strike"],
+                            round(row["lastPrice"],2),
+                            int(dte),
+                            round(option_score,2)
                         ])
 
-                # Puts
-                for _, row in puts.iterrows():
-                    if -0.65 <= row["delta"] <= -0.4:
+                for _, row in chain.puts.iterrows():
+                    if row["strike"] < current_price * 0.98 and row["strike"] > current_price * 0.93:
+                        option_score = stock_score * PUT_WEIGHT
+                        option_score += row["volume"] / 1000
                         results.append([
-                            ticker,"PUT",exp,row["strike"],
-                            row["lastPrice"],score
+                            ticker,
+                            "PUT",
+                            exp,
+                            row["strike"],
+                            round(row["lastPrice"],2),
+                            int(dte),
+                            round(option_score,2)
                         ])
     except:
         pass
 
 df = pd.DataFrame(results, columns=[
-    "Ticker","Type","Expiration","Strike","Premium","Score"
+    "Ticker","Type","Expiration","Strike",
+    "Premium","DTE","Score"
 ])
 
-df = df.sort_values("Score",ascending=False).head(10)
+df = df.sort_values("Score", ascending=False)
 
-st.dataframe(df)
+top_calls = df[df["Type"]=="CALL"].head(5)
+top_puts = df[df["Type"]=="PUT"].head(5)
+
+st.subheader("Top 5 CALLS")
+st.dataframe(top_calls, use_container_width=True)
+
+st.subheader("Top 5 PUTS")
+st.dataframe(top_puts, use_container_width=True)
+
+st.subheader("Capital Deployment Plan ($500 Aggressive)")
+st.write("""
+Primary: Allocate $200 to top ranked contract  
+Secondary: $150 to second highest  
+Tactical: $150 to third ranked  
+Cut at -50%  
+Target 80%+
+""")
