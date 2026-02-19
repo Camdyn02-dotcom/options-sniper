@@ -1,25 +1,16 @@
+import streamlit as st
 import yfinance as yf
 import pandas as pd
-import numpy as np
-import streamlit as st
-from datetime import datetime
+import datetime
 import os
+
+# -----------------------------
+# Market Universe Settings
+# -----------------------------
 UNIVERSE_FILE = "market_universe.csv"
+
 def build_universe():
-
-    # Use major US ETFs to pull large holdings
-    seed_etfs = ["SPY", "QQQ", "IWM", "DIA"]
-
-    all_symbols = set()
-
-    for etf in seed_etfs:
-        try:
-            holdings = yf.Ticker(etf).history(period="1d")
-            all_symbols.add(etf)
-        except:
-            continue
-
-    # Hard-seed high liquidity list (top traded names)
+    # Hard-coded high liquidity seed
     liquidity_core = [
         "AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA",
         "AMD","NFLX","AVGO","JPM","BAC","XOM","CVX",
@@ -28,12 +19,9 @@ def build_universe():
         "SPY","QQQ","IWM","DIA"
     ]
 
-    all_symbols.update(liquidity_core)
-
     qualified = []
 
-    for ticker in all_symbols:
-
+    for ticker in liquidity_core:
         try:
             stock = yf.Ticker(ticker)
             hist = stock.history(period="60d")
@@ -44,7 +32,7 @@ def build_universe():
             avg_volume = hist["Volume"].mean()
             price = hist["Close"].iloc[-1]
 
-            if avg_volume > 500000 and 5 < price < 800:
+            if avg_volume > 500_000 and 5 < price < 800:
                 qualified.append(ticker)
 
         except:
@@ -54,6 +42,16 @@ def build_universe():
     df_universe.to_csv(UNIVERSE_FILE, index=False)
 
     return qualified
+
+# -----------------------------
+# Load Universe
+# -----------------------------
+if os.path.exists(UNIVERSE_FILE):
+    tickers = pd.read_csv(UNIVERSE_FILE)["Ticker"].tolist()
+else:
+    tickers = build_universe()
+
+st.write("Universe Size:", len(tickers))
 
 st.set_page_config(layout="wide")
 st.title("Aggressive Monthly Options Sniper")
