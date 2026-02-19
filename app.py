@@ -52,7 +52,7 @@ def build_universe():
                 continue
             avg_volume = hist["Volume"].mean()
             price = hist["Close"].iloc[-1]
-            if avg_volume > 250_000 and 5 < price < 800:
+            if avg_volume > 100_000 and 1 < price < 800:  # relaxed filters
                 qualified.append(ticker)
         except:
             continue
@@ -102,6 +102,14 @@ for ticker in tickers:
         for df_opts, typ in [(calls, "CALL"), (puts, "PUT")]:
             for _, row in df_opts.iterrows():
                 try:
+                    # ------------------------
+                    # Minimum expiration filter
+                    # ------------------------
+                    exp_date = datetime.datetime.strptime(exp, "%Y-%m-%d")
+                    dte = (exp_date - datetime.datetime.today()).days
+                    if dte < 7:
+                        continue  # skip short-term options
+
                     score = 0
                     volume = row.get("volume",0)
                     oi = row.get("openInterest",0)
@@ -146,7 +154,8 @@ for ticker in tickers:
                         "LastPrice": round(row["lastPrice"],2),
                         "Volume": int(volume),
                         "OpenInterest": int(oi),
-                        "Score": score
+                        "Score": score,
+                        "DTE": dte
                     })
                 except:
                     continue
@@ -160,7 +169,7 @@ if not all_options:
     df = pd.DataFrame(columns=[
         "Ticker","Type","Expiration","Strike",
         "StockPrice","Bid","Ask","LastPrice",
-        "Volume","OpenInterest","Score"
+        "Volume","OpenInterest","Score","DTE"
     ])
 else:
     df = pd.DataFrame(all_options)
@@ -206,7 +215,8 @@ for _, row in top_combined.iterrows():
                 "Strike": row["Strike"],
                 "Expiration": row["Expiration"],
                 "Contracts": contracts,
-                "Total Cost": round(total_cost,2)
+                "Total Cost": round(total_cost,2),
+                "DTE": row["DTE"]
             })
             capital -= total_cost
 
