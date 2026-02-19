@@ -142,14 +142,14 @@ for ticker in tickers:
 
                         # Delta probability scoring
                         if "delta" in row:
-                        delta_val = abs(row["delta"])
+                            delta_val = abs(row["delta"])
                         else:
-                        delta_val = 0.4
+                            delta_val = 0.4
 
                         if 0.35 <= delta_val <= 0.55:
-                        option_score += 3
+                            option_score += 3
                         elif delta_val < 0.25:
-                        option_score -= 2
+                            option_score -= 2
                         if row["volume"] > 1000:
                             option_score += 3
 
@@ -188,15 +188,15 @@ for ticker in tickers:
                         option_score += earnings_boost
                         # Delta probability scoring
                         if "impliedVolatility" in row and "delta" in row:
-                        delta_val = abs(row["delta"])
+                            delta_val = abs(row["delta"])
                         else:
-                        delta_val = 0.4  # fallback estimate
+                            delta_val = 0.4  # fallback estimate
 
                         # Reward ideal aggressive swing zone
                         if 0.35 <= delta_val <= 0.55:
-                        option_score += 3
+                            option_score += 3
                         elif delta_val < 0.25:
-                        option_score -= 2
+                            option_score -= 2
                         
 
                         if row["volume"] > 1000:
