@@ -17,10 +17,38 @@ tickers = [
     "NVDA","AMD","TSLA","META","AAPL","COIN",
     "AMZN","MSFT","GOOGL","NFLX","PLTR","SHOP"
 ]
+# =============================
+# MARKET ENGINE (Phases 7 & 9)
+# =============================
 
 spy = yf.Ticker("SPY")
 spy_hist = spy.history(period="6mo")
+
 spy_return = spy_hist["Close"].pct_change(60).iloc[-1]
+
+# Market regime detection
+if spy_hist["Close"].ewm(span=50).mean().iloc[-1] > spy_hist["Close"].ewm(span=200).mean().iloc[-1]:
+    market_trend = "Bull"
+else:
+    market_trend = "Bear"
+
+# Dynamic expiration logic
+volatility = spy_hist["Close"].pct_change().rolling(20).std().iloc[-1]
+
+if volatility > 0.025:
+    MIN_DTE = 20
+    MAX_DTE = 35
+else:
+    MIN_DTE = 30
+    MAX_DTE = 50
+
+# Directional weighting
+if market_trend == "Bull":
+    CALL_WEIGHT = 1.5
+    PUT_WEIGHT = 0.9
+else:
+    CALL_WEIGHT = 1.0
+    PUT_WEIGHT = 1.4
 
 def compute_rsi(series, period=14):
     delta = series.diff()
