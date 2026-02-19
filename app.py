@@ -46,16 +46,21 @@ def score_stock(hist):
     return score
 
 results = []
+
 for ticker in tickers:
     try:
         stock = yf.Ticker(ticker)
-        earnings_date = None
-try:
-    cal = stock.calendar
-    if not cal.empty:
-        earnings_date = cal.index[0]
-        hist = stock.history(period="6mo")
 
+        # Earnings detection
+        earnings_date = None
+        try:
+            cal = stock.calendar
+            if not cal.empty:
+                earnings_date = cal.index[0]
+        except:
+            pass
+
+        hist = stock.history(period="6mo")
         if len(hist) < 100:
             continue
 
@@ -67,20 +72,32 @@ try:
             dte = (exp_date - datetime.today()).days
 
             if MIN_DTE <= dte <= MAX_DTE:
+
+                earnings_boost = 0
+                if earnings_date is not None:
+                    days_to_earnings = (earnings_date - datetime.today()).days
+                    if 0 < days_to_earnings <= dte:
+                        earnings_boost = 3
+
                 chain = stock.option_chain(exp)
 
+                # CALLS
                 for _, row in chain.calls.iterrows():
                     if row["strike"] > current_price * 1.03 and row["strike"] < current_price * 1.12:
+
                         option_score = stock_score * CALL_WEIGHT
                         option_score += row["volume"] / 1000
-                        contract_cost = row["lastPrice"] * 100
-if contract_cost > 250:
-    continue 
-                           if row["volume"] > 1000:
+                        option_score += earnings_boost
+
+                        if row["volume"] > 1000:
                             option_score += 3
 
                         if row["openInterest"] > 2000:
                             option_score += 2
+
+                        contract_cost = row["lastPrice"] * 100
+                        if contract_cost > 250:
+                            continue
 
                         results.append([
                             ticker,
@@ -97,18 +114,23 @@ if contract_cost > 250:
                             round(option_score,2)
                         ])
 
+                # PUTS
                 for _, row in chain.puts.iterrows():
                     if row["strike"] < current_price * 0.97 and row["strike"] > current_price * 0.88:
+
                         option_score = stock_score * PUT_WEIGHT
                         option_score += row["volume"] / 1000
-                        contract_cost = row["lastPrice"] * 100
-if contract_cost > 250:
-    continue 
+                        option_score += earnings_boost
+
                         if row["volume"] > 1000:
                             option_score += 3
 
                         if row["openInterest"] > 2000:
                             option_score += 2
+
+                        contract_cost = row["lastPrice"] * 100
+                        if contract_cost > 250:
+                            continue
 
                         results.append([
                             ticker,
