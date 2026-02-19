@@ -216,7 +216,14 @@ for ticker in tickers:
         continue
 
 df = pd.DataFrame(all_options)
-df = df[df["Score"] > 6]
+if not df.empty and "Score" in df.columns:
+    df = df[df["Score"] > 6]
+else:
+    st.warning("No options scored today. Increase universe or relax filters.")
+    df = pd.DataFrame(columns=[
+        "Ticker","Type","Expiration","Strike",
+        "StockPrice","Bid","Ask","LastPrice",
+        "Volume","OpenInterest","DTE","Score"]
 df = df.sort_values("Score", ascending=False)
 
 top_calls = df[df["Type"]=="CALL"].head(5)
