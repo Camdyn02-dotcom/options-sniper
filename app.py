@@ -75,6 +75,7 @@ try:
                         option_score += row["volume"] / 1000
                         contract_cost = row["lastPrice"] * 100
 if contract_cost > 250:
+    continue 
                            if row["volume"] > 1000:
                             option_score += 3
 
@@ -102,7 +103,7 @@ if contract_cost > 250:
                         option_score += row["volume"] / 1000
                         contract_cost = row["lastPrice"] * 100
 if contract_cost > 250:
-
+    continue 
                         if row["volume"] > 1000:
                             option_score += 3
 
