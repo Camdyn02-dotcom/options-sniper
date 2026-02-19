@@ -217,6 +217,9 @@ df = df[df["Score"] > 6]
 
 top_calls = df[df["Type"]=="CALL"].head(5)
 top_puts = df[df["Type"]=="PUT"].head(5)
+st.markdown("### Market Summary")
+st.write(f"Market Regime: {market_trend}")
+st.write(f"Volatility Level: {round(volatility,4)}")
 
 st.subheader("Top 5 CALLS")
 st.dataframe(top_calls, use_container_width=True)
