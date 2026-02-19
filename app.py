@@ -50,6 +50,78 @@ if os.path.exists(UNIVERSE_FILE):
     tickers = pd.read_csv(UNIVERSE_FILE)["Ticker"].tolist()
 else:
     tickers = build_universe()
+# =============================
+# OPTIONS SCANNER
+# =============================
+st.markdown("## Options Scanner")
+
+import datetime
+
+all_options = []
+
+# Loop through tickers in universe
+for ticker in tickers:
+
+    try:
+        opt = yf.Ticker(ticker)
+        expirations = opt.options
+
+        if not expirations:
+            continue  # Skip tickers without options
+
+        # Use nearest expiration
+        exp = expirations[0]
+        chain = opt.option_chain(exp)
+
+        calls = chain.calls
+        puts = chain.puts
+
+        # Add scoring column for each contract
+        for df, typ in [(calls, "Call"), (puts, "Put")]:
+            for _, row in df.iterrows():
+                try:
+                    score = 0
+
+                    # Example scoring: volume + openInterest
+                    if "volume" in row and row["volume"] > 1000:
+                        score += 2
+                    if "openInterest" in row and row["openInterest"] > 1000:
+                        score += 3
+
+                    # Delta scoring
+                    if "delta" in row:
+                        delta_val = abs(row["delta"])
+                    else:
+                        delta_val = 0.4
+                    if 0.35 <= delta_val <= 0.55:
+                        score += 3
+                    elif delta_val < 0.25:
+                        score -= 2
+
+                    all_options.append({
+                        "Ticker": ticker,
+                        "Type": typ,
+                        "Strike": row["strike"],
+                        "Expiration": exp,
+                        "LastPrice": row["lastPrice"],
+                        "Volume": row.get("volume", 0),
+                        "OpenInterest": row.get("openInterest", 0),
+                        "Delta": delta_val,
+                        "Score": score
+                    })
+
+                except:
+                    continue
+
+    except Exception as e:
+        print(f"Options fetch failed for {ticker}: {e}")
+        continue
+
+# Convert to dataframe
+df = pd.DataFrame(all_options)
+
+# Display table
+st.dataframe(df, use_container_width=True)
 
 st.write("Universe Size:", len(tickers))
 
