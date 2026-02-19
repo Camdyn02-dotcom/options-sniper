@@ -68,8 +68,9 @@ for ticker in tickers:
                     if row["strike"] > current_price * 1.03 and row["strike"] < current_price * 1.12:
                         option_score = stock_score * CALL_WEIGHT
                         option_score += row["volume"] / 1000
-
-                        if row["volume"] > 1000:
+                        contract_cost = row["lastPrice"] * 100
+if contract_cost > 250:
+                           if row["volume"] > 1000:
                             option_score += 3
 
                         if row["openInterest"] > 2000:
@@ -94,6 +95,8 @@ for ticker in tickers:
                     if row["strike"] < current_price * 0.97 and row["strike"] > current_price * 0.88:
                         option_score = stock_score * PUT_WEIGHT
                         option_score += row["volume"] / 1000
+                        contract_cost = row["lastPrice"] * 100
+if contract_cost > 250:
 
                         if row["volume"] > 1000:
                             option_score += 3
