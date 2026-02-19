@@ -49,6 +49,11 @@ results = []
 for ticker in tickers:
     try:
         stock = yf.Ticker(ticker)
+        earnings_date = None
+try:
+    cal = stock.calendar
+    if not cal.empty:
+        earnings_date = cal.index[0]
         hist = stock.history(period="6mo")
 
         if len(hist) < 100:
