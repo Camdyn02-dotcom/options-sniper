@@ -145,6 +145,9 @@ for ticker in tickers:
 
                         if row["openInterest"] > 2000:
                             option_score += 2
+                            # Gamma squeeze detection
+if row["openInterest"] > 5000 and row["volume"] > 2000:
+    option_score += 4
 
                         contract_cost = row["lastPrice"] * 100
                         if contract_cost > 250:
@@ -178,6 +181,9 @@ for ticker in tickers:
 
                         if row["openInterest"] > 2000:
                             option_score += 2
+                            # Gamma squeeze detection
+if row["openInterest"] > 5000 and row["volume"] > 2000:
+    option_score += 4
 
                         contract_cost = row["lastPrice"] * 100
                         if contract_cost > 250:
