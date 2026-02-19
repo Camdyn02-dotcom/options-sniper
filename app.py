@@ -4,12 +4,8 @@ import numpy as np
 import streamlit as st
 from datetime import datetime
 import os
-UNIVERSE_FILE = "market_universe.csv"
 def build_universe():
- if os.path.exists(UNIVERSE_FILE):
-    tickers = pd.read_csv(UNIVERSE_FILE)["Ticker"].tolist()
- else:
-    tickers = build_universe()
+
     # Use major US ETFs to pull large holdings
     seed_etfs = ["SPY", "QQQ", "IWM", "DIA"]
 
@@ -28,8 +24,7 @@ def build_universe():
         "AMD","NFLX","AVGO","JPM","BAC","XOM","CVX",
         "UNH","LLY","HD","COST","WMT","KO","PEP",
         "INTC","CSCO","ADBE","CRM","PYPL","ORCL",
-        "SPY","QQQ","IWM","DIA""NVDA","AMD","TSLA","META","AAPL","COIN",
-    "AMZN","MSFT","GOOGL","NFLX","PLTR","SHOP"
+        "SPY","QQQ","IWM","DIA"
     ]
 
     all_symbols.update(liquidity_core)
@@ -53,10 +48,11 @@ def build_universe():
 
         except:
             continue
-df_universe = pd.DataFrame({"Ticker": qualified})
-df_universe.to_csv(UNIVERSE_FILE, index=False)
-        
-return qualified
+
+    df_universe = pd.DataFrame({"Ticker": qualified})
+    df_universe.to_csv(UNIVERSE_FILE, index=False)
+
+    return qualified
 
 st.set_page_config(layout="wide")
 st.title("Aggressive Monthly Options Sniper")
