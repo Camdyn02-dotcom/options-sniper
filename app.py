@@ -53,6 +53,7 @@ def build_universe():
     df_universe.to_csv(UNIVERSE_FILE, index=False)
 
     return qualified
+
 if os.path.exists(UNIVERSE_FILE):
     tickers = pd.read_csv(UNIVERSE_FILE)["Ticker"].tolist()
 else:
