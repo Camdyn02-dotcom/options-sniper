@@ -1,3 +1,17 @@
+import subprocess
+import sys
+
+# -----------------------------
+# Ensure snscrape is uninstalled
+# -----------------------------
+try:
+    subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "snscrape"], check=True)
+except Exception as e:
+    pass  # ignore any errors if not installed
+
+# -----------------------------
+# Now import the rest
+# -----------------------------
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -5,7 +19,6 @@ import numpy as np
 import datetime
 import os
 import time
-
 st.set_page_config(layout="wide")
 st.title("Aggressive Options Sniper Dashboard")
 
