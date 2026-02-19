@@ -13,6 +13,9 @@ CALL_WEIGHT = 1.2
 PUT_WEIGHT = 1.0
 
 tickers = [
+    spy = yf.Ticker("SPY")
+spy_hist = spy.history(period="6mo")
+spy_return = spy_hist["Close"].pct_change(60).iloc[-1]
     "NVDA","AMD","TSLA","META","AAPL","COIN",
     "AMZN","MSFT","GOOGL","NFLX","PLTR","SHOP"
 ]
@@ -42,7 +45,10 @@ def score_stock(hist):
 
     if hist["atr"].iloc[-1] > hist["atr"].rolling(20).mean().iloc[-1]:
         score += 2
-
+# Relative strength vs SPY
+stock_return = hist["Close"].pct_change(60).iloc[-1]
+if stock_return > spy_return:
+    score += 3
     return score
 
 results = []
