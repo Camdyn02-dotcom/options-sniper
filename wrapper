@@ -1,0 +1,7 @@
+# app.py wrapper
+try:
+    import app_main  # <-- the renamed file with your full code
+except Exception as e:
+    import streamlit as st
+    st.error("The main app failed to load.")
+    st.write(e)
