@@ -164,7 +164,33 @@ if not df_short.empty:
     st.dataframe(df_short.sort_values("Score", ascending=False), use_container_width=True)
 else:
     st.write("No short-term options scored today.")
+# -----------------------------
+# Trending / Most Active Options (Yahoo Finance)
+# -----------------------------
+st.subheader("Trending / Most Active Options (Yahoo Finance)")
 
+try:
+    # Calls
+    calls_url = "https://finance.yahoo.com/options/most-active?count=100"
+    calls_tables = pd.read_html(calls_url)
+    calls_df = calls_tables[0]
+    calls_df = calls_df.rename(columns=lambda x: x.replace("\n", " "))
+    calls_df = calls_df[["Symbol", "Last Price", "Volume", "Open Interest"]].head(10)
+    calls_df["Type"] = "CALL"
+    
+    # Puts
+    puts_url = "https://finance.yahoo.com/options/most-active?count=100&putCall=PUT"
+    puts_tables = pd.read_html(puts_url)
+    puts_df = puts_tables[0]
+    puts_df = puts_df.rename(columns=lambda x: x.replace("\n", " "))
+    puts_df = puts_df[["Symbol", "Last Price", "Volume", "Open Interest"]].head(10)
+    puts_df["Type"] = "PUT"
+    
+    trending_df = pd.concat([calls_df, puts_df], ignore_index=True)
+    st.dataframe(trending_df, use_container_width=True)
+
+except Exception as e:
+    st.write("Could not fetch trending options:", e)
 # -----------------------------
 # Portfolio Simulation
 # -----------------------------
