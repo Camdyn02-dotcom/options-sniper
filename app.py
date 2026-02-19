@@ -6,7 +6,10 @@ from datetime import datetime
 import os
 UNIVERSE_FILE = "market_universe.csv"
 def build_universe():
-
+ if os.path.exists(UNIVERSE_FILE):
+    tickers = pd.read_csv(UNIVERSE_FILE)["Ticker"].tolist()
+    else:
+    tickers = build_universe()
     # Use major US ETFs to pull large holdings
     seed_etfs = ["SPY", "QQQ", "IWM", "DIA"]
 
@@ -53,14 +56,7 @@ def build_universe():
 
     df_universe = pd.DataFrame({"Ticker": qualified})
     df_universe.to_csv(UNIVERSE_FILE, index=False)
-    
-    if os.path.exists(UNIVERSE_FILE):
-    tickers = pd.read_csv(UNIVERSE_FILE)["Ticker"].tolist()
-    else:
-    tickers = build_universe()
-
-    return qualified
-
+       return qualified
 
 st.set_page_config(layout="wide")
 st.title("Aggressive Monthly Options Sniper")
