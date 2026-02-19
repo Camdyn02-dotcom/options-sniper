@@ -46,7 +46,6 @@ def score_stock(hist):
     return score
 
 results = []
-
 for ticker in tickers:
     try:
         stock = yf.Ticker(ticker)
@@ -69,12 +68,24 @@ for ticker in tickers:
                     if row["strike"] > current_price * 1.02 and row["strike"] < current_price * 1.07:
                         option_score = stock_score * CALL_WEIGHT
                         option_score += row["volume"] / 1000
+
+                        if row["volume"] > 1000:
+                            option_score += 3
+
+                        if row["openInterest"] > 2000:
+                            option_score += 2
+
                         results.append([
                             ticker,
                             "CALL",
                             exp,
                             row["strike"],
+                            round(current_price,2),
+                            round(row["bid"],2),
+                            round(row["ask"],2),
                             round(row["lastPrice"],2),
+                            int(row["volume"]),
+                            int(row["openInterest"]),
                             int(dte),
                             round(option_score,2)
                         ])
@@ -83,12 +94,24 @@ for ticker in tickers:
                     if row["strike"] < current_price * 0.98 and row["strike"] > current_price * 0.93:
                         option_score = stock_score * PUT_WEIGHT
                         option_score += row["volume"] / 1000
+
+                        if row["volume"] > 1000:
+                            option_score += 3
+
+                        if row["openInterest"] > 2000:
+                            option_score += 2
+
                         results.append([
                             ticker,
                             "PUT",
                             exp,
                             row["strike"],
+                            round(current_price,2),
+                            round(row["bid"],2),
+                            round(row["ask"],2),
                             round(row["lastPrice"],2),
+                            int(row["volume"]),
+                            int(row["openInterest"]),
                             int(dte),
                             round(option_score,2)
                         ])
@@ -97,7 +120,8 @@ for ticker in tickers:
 
 df = pd.DataFrame(results, columns=[
     "Ticker","Type","Expiration","Strike",
-    "Premium","DTE","Score"
+    "StockPrice","Bid","Ask","LastPrice",
+    "Volume","OpenInterest","DTE","Score"
 ])
 
 df = df.sort_values("Score", ascending=False)
