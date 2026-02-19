@@ -260,3 +260,85 @@ Tactical: $150 to third ranked
 Cut at -50%  
 Target 80%+
 """)
+st.markdown("### Trade Logger & Performance Tracker")
+
+if "trade_log" not in st.session_state:
+    st.session_state.trade_log = []
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    log_ticker = st.text_input("Ticker")
+
+with col2:
+    log_entry = st.number_input("Entry Price", min_value=0.0)
+
+with col3:
+    log_exit = st.number_input("Exit Price", min_value=0.0)
+
+with col4:
+    if st.button("Log Trade"):
+        pnl = log_exit - log_entry
+        st.session_state.trade_log.append({
+            "Ticker": log_ticker,
+            "Entry": log_entry,
+            "Exit": log_exit,
+            "PnL": pnl
+        })
+
+if len(st.session_state.trade_log) > 0:
+    trade_df = pd.DataFrame(st.session_state.trade_log)
+    st.dataframe(trade_df, use_container_width=True)
+
+    win_rate = len(trade_df[trade_df["PnL"] > 0]) / len(trade_df)
+    avg_gain = trade_df["PnL"].mean()
+
+    st.write(f"Win Rate: {round(win_rate*100,1)}%")
+    st.write(f"Average PnL: {round(avg_gain,2)}")
+# =============================
+# PORTFOLIO SIMULATION ENGINE
+# =============================
+
+st.markdown("## Portfolio Simulation ($500 Aggressive Intelligent Allocation)")
+
+capital = 500
+allocation = []
+
+# Use top 5 highest scoring contracts
+top_combined = df.sort_values("Score", ascending=False).head(5)
+
+for _, row in top_combined.iterrows():
+    contract_price = row["LastPrice"] * 100
+
+    # Allocation scaling based on score strength
+    if row["Score"] >= 15:
+        allocation_size = 0.4
+    elif row["Score"] >= 10:
+        allocation_size = 0.3
+    else:
+        allocation_size = 0.2
+
+    max_alloc = capital * allocation_size
+
+    if contract_price <= max_alloc:
+        contracts = int(max_alloc // contract_price)
+        if contracts > 0:
+            total_cost = contracts * contract_price
+
+            allocation.append({
+                "Ticker": row["Ticker"],
+                "Type": row["Type"],
+                "Strike": row["Strike"],
+                "Expiration": row["Expiration"],
+                "Contracts": contracts,
+                "Total Cost": round(total_cost, 2)
+            })
+
+            capital -= total_cost
+
+if len(allocation) > 0:
+    sim_df = pd.DataFrame(allocation)
+    st.dataframe(sim_df, use_container_width=True)
+    st.write(f"Remaining Capital: ${round(capital,2)}")
+else:
+    st.write("No contracts fit capital allocation rules today.")
