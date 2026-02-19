@@ -132,7 +132,7 @@ for ticker in tickers:
 
                 chain = stock.option_chain(exp)
 
-                # CALLS
+                 # CALLS
                 for _, row in chain.calls.iterrows():
                     if row["strike"] > current_price * 1.03 and row["strike"] < current_price * 1.12:
 
@@ -143,30 +143,30 @@ for ticker in tickers:
                         if row["volume"] > 1000:
                             option_score += 3
 
-                          if row["openInterest"] > 2000:
+                        if row["openInterest"] > 2000:
                             option_score += 2
-                        
-                          # Gamma squeeze detection
-                          if row["openInterest"] > 5000 and row["volume"] > 2000:
-                             option_score += 4
 
-                          contract_cost = row["lastPrice"] * 100
-                          if contract_cost > 250:
-                              continue
+                        # Gamma squeeze detection
+                        if row["openInterest"] > 5000 and row["volume"] > 2000:
+                            option_score += 4
+
+                        contract_cost = row["lastPrice"] * 100
+                        if contract_cost > 250:
+                            continue
 
                         results.append([
                             ticker,
                             "CALL",
                             exp,
                             row["strike"],
-                            round(current_price,2),
-                            round(row["bid"],2),
-                            round(row["ask"],2),
-                            round(row["lastPrice"],2),
+                            round(current_price, 2),
+                            round(row["bid"], 2),
+                            round(row["ask"], 2),
+                            round(row["lastPrice"], 2),
                             int(row["volume"]),
                             int(row["openInterest"]),
                             int(dte),
-                            round(option_score,2)
+                            round(option_score, 2)
                         ])
 
                 # PUTS
@@ -182,9 +182,9 @@ for ticker in tickers:
 
                         if row["openInterest"] > 2000:
                             option_score += 2
-                            
+
                         # Gamma squeeze detection
-                            if row["openInterest"] > 5000 and row["volume"] > 2000:
+                        if row["openInterest"] > 5000 and row["volume"] > 2000:
                             option_score += 4
 
                         contract_cost = row["lastPrice"] * 100
@@ -196,14 +196,14 @@ for ticker in tickers:
                             "PUT",
                             exp,
                             row["strike"],
-                            round(current_price,2),
-                            round(row["bid"],2),
-                            round(row["ask"],2),
-                            round(row["lastPrice"],2),
+                            round(current_price, 2),
+                            round(row["bid"], 2),
+                            round(row["ask"], 2),
+                            round(row["lastPrice"], 2),
                             int(row["volume"]),
                             int(row["openInterest"]),
                             int(dte),
-                            round(option_score,2)
+                            round(option_score, 2)
                         ])
     except:
         pass
