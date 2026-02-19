@@ -3,6 +3,23 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 from datetime import datetime
+# =============================
+# BUILD LARGE LIQUID MARKET UNIVERSE
+# =============================
+
+import pandas as pd
+
+sp500_url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+nasdaq_url = "https://en.wikipedia.org/wiki/Nasdaq-100"
+
+sp500 = pd.read_html(sp500_url)[0]["Symbol"].tolist()
+nasdaq100 = pd.read_html(nasdaq_url)[4]["Ticker"].tolist()
+
+# Clean tickers (remove dots for Yahoo format)
+sp500 = [t.replace(".", "-") for t in sp500]
+nasdaq100 = [t.replace(".", "-") for t in nasdaq100]
+
+tickers = list(set(sp500 + nasdaq100))
 
 st.set_page_config(layout="wide")
 st.title("Aggressive Monthly Options Sniper")
