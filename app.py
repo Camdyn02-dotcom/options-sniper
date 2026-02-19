@@ -5,7 +5,7 @@ import streamlit as st
 from datetime import datetime
 
 st.set_page_config(layout="wide")
-st.title("Aggressive $500 Monthly Options Sniper")
+st.title("Aggressive Monthly Options Sniper")
 
 MIN_DTE = 30
 MAX_DTE = 45
@@ -65,7 +65,7 @@ for ticker in tickers:
                 chain = stock.option_chain(exp)
 
                 for _, row in chain.calls.iterrows():
-                    if row["strike"] > current_price * 1.02 and row["strike"] < current_price * 1.07:
+                    if row["strike"] > current_price * 1.03 and row["strike"] < current_price * 1.12:
                         option_score = stock_score * CALL_WEIGHT
                         option_score += row["volume"] / 1000
 
@@ -91,7 +91,7 @@ for ticker in tickers:
                         ])
 
                 for _, row in chain.puts.iterrows():
-                    if row["strike"] < current_price * 0.98 and row["strike"] > current_price * 0.93:
+                    if row["strike"] < current_price * 0.97 and row["strike"] > current_price * 0.88:
                         option_score = stock_score * PUT_WEIGHT
                         option_score += row["volume"] / 1000
 
@@ -125,6 +125,7 @@ df = pd.DataFrame(results, columns=[
 ])
 
 df = df.sort_values("Score", ascending=False)
+df = df[df["Score"] > 6]
 
 top_calls = df[df["Type"]=="CALL"].head(5)
 top_puts = df[df["Type"]=="PUT"].head(5)
