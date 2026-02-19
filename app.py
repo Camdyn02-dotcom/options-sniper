@@ -12,39 +12,65 @@ st.set_page_config(layout="wide")
 st.title("Aggressive Monthly Options Sniper")
 
 # -----------------------------
-# Market Universe Settings
+# Market Universe Settings (~200 tickers)
 # -----------------------------
 UNIVERSE_FILE = "market_universe.csv"
-CACHE_DIR = "cache"
-if not os.path.exists(CACHE_DIR):
-    os.makedirs(CACHE_DIR)
 
 def build_universe():
-    liquidity_core = [
-        "AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA",
-        "AMD","NFLX","AVGO","JPM","BAC","XOM","CVX",
-        "UNH","LLY","HD","COST","WMT","KO","PEP",
-        "INTC","CSCO","ADBE","CRM","PYPL","ORCL",
-        "SPY","QQQ","IWM","DIA"
+    """
+    Build a liquid universe of ~200 tickers manually, filtered by average volume & price.
+    """
+    # Base ETFs / core high-liquidity stocks
+    base_symbols = [
+        "SPY","QQQ","IWM","DIA","XLF","XLY","XLC","XLK","XLV","XLI","XLE","XLB","XLU",
+        "AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA","AMD","INTC","CSCO","ADBE","CRM",
+        "PYPL","ORCL","NFLX","V","MA","JPM","BAC","C","WFC","GS","BRK-B","UNH","LLY","PFE",
+        "MRK","ABBV","TMO","DHR","LMT","BA","RTX","DIS","TMUS","VZ","CMCSA","KO","PEP","MCD",
+        "SBUX","XOM","CVX","COP","SLB"
     ]
+
+    # Add extra tickers to reach ~200
+    extra_symbols = [
+        "BMY","AMAT","ASML","QCOM","TXN","IBM","HON","MMM","CAT","DE","GS","MS",
+        "SPGI","ICE","ADP","NOW","SNOW","TEAM","ZM","UBER","LYFT","SHOP","SQ","ROKU",
+        "DOCU","PLTR","PINS","TWTR","SNAP","DDOG","CRWD","NET","OKTA","FISV","PAYC",
+        "DXCM","MRNA","REGN","BIIB","VRTX","ALGN","ISRG","EW","MNST","PEP","KO","MO",
+        "PM","NKE","LULU","TJX","ROST","HD","LOW","COST","WMT","TGT","DG","DLTR",
+        "RCL","CCL","NCLH","MGM","WYNN","MAR","HLT","HST","SPG","VTR","EQR","AVB",
+        "DLR","PLD","EXR","O","EQIX","COST","WMT","HD","LOW","KMB","CL","PG","EL",
+        "KO","PEP","MO","PM","BF-B","ADM","GIS","CPB","K","HSY","MDLZ","MNST"
+    ]
+
+    universe_candidates = list(set(base_symbols + extra_symbols))[:200]
+
     qualified = []
-    for ticker in liquidity_core:
+
+    for ticker in universe_candidates:
         try:
             stock = yf.Ticker(ticker)
             hist = stock.history(period="60d")
             if len(hist) < 40:
                 continue
+
             avg_volume = hist["Volume"].mean()
             price = hist["Close"].iloc[-1]
+
+            # Only keep liquid, reasonably priced stocks
             if avg_volume > 500_000 and 5 < price < 800:
                 qualified.append(ticker)
+
         except:
             continue
+
+    # Save to CSV
     df_universe = pd.DataFrame({"Ticker": qualified})
     df_universe.to_csv(UNIVERSE_FILE, index=False)
+
     return qualified
 
-# Load or build universe
+# -----------------------------
+# Load Universe
+# -----------------------------
 if os.path.exists(UNIVERSE_FILE):
     tickers = pd.read_csv(UNIVERSE_FILE)["Ticker"].tolist()
 else:
