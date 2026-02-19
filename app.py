@@ -39,18 +39,33 @@ def score_stock(hist):
 
     score = 0
 
+    # Trend strength
     if hist["ema50"].iloc[-1] > hist["ema200"].iloc[-1]:
         score += 3
 
+    # RSI momentum
     if 55 <= hist["rsi"].iloc[-1] <= 70:
         score += 2
 
+    # ATR expansion
     if hist["atr"].iloc[-1] > hist["atr"].rolling(20).mean().iloc[-1]:
         score += 2
-# Relative strength vs SPY
-stock_return = hist["Close"].pct_change(60).iloc[-1]
-if stock_return > spy_return:
-    score += 3
+
+    # Breakout detection
+    recent_high = hist["High"].rolling(20).max().iloc[-2]
+    if hist["Close"].iloc[-1] > recent_high:
+        score += 4
+
+    # Volatility spike detection
+    recent_vol = hist["Close"].pct_change().rolling(10).std().iloc[-1]
+    long_vol = hist["Close"].pct_change().rolling(30).std().iloc[-1]
+    if recent_vol > long_vol * 1.5:
+        score += 3
+
+    # Relative strength vs SPY
+    stock_return = hist["Close"].pct_change(60).iloc[-1]
+    if stock_return > spy_return:
+        score += 3
     return score
 
 results = []
