@@ -139,6 +139,17 @@ for ticker in tickers:
                         option_score = stock_score * CALL_WEIGHT
                         option_score += row["volume"] / 1000
                         option_score += earnings_boost
+                        # Delta probability scoring
+if "impliedVolatility" in row and "delta" in row:
+    delta_val = abs(row["delta"])
+else:
+    delta_val = 0.4  # fallback estimate
+
+# Reward ideal aggressive swing zone
+if 0.35 <= delta_val <= 0.55:
+    option_score += 3
+elif delta_val < 0.25:
+    option_score -= 2
 
                         if row["volume"] > 1000:
                             option_score += 3
@@ -176,6 +187,18 @@ for ticker in tickers:
                         option_score = stock_score * PUT_WEIGHT
                         option_score += row["volume"] / 1000
                         option_score += earnings_boost
+                        # Delta probability scoring
+if "impliedVolatility" in row and "delta" in row:
+    delta_val = abs(row["delta"])
+else:
+    delta_val = 0.4  # fallback estimate
+
+# Reward ideal aggressive swing zone
+if 0.35 <= delta_val <= 0.55:
+    option_score += 3
+elif delta_val < 0.25:
+    option_score -= 2
+                        
 
                         if row["volume"] > 1000:
                             option_score += 3
