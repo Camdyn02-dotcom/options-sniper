@@ -3,7 +3,8 @@ import yfinance as yf
 import pandas as pd
 import datetime
 import os
-import time
+import time 
+import snscrape.modules.twitter as sntwitter   # REMOVE OR COMMENT OUT
 
 st.set_page_config(layout="wide")
 st.title("Aggressive Options Sniper Dashboard")
